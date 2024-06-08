@@ -201,6 +201,10 @@ public:
 	{
 		value = fused_t::to(this->value);
 	}
+	double get()
+	{
+		return fused_t::to(this->value);
+	}
 
 	void load(fused_t value)
 	{
