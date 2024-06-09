@@ -22,13 +22,12 @@ cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-head
 ld_flags = []
 
 sys_modules = ['cstdint', 'print']
+sys_c_modules = ['stdio.h', 'sys/types.h']
 
 # Properties: is module, primary dependencies
 primaries = {
-    'cc': [[True, []],
-           ['cc.cppm', 'fused.cppm']],
-    'main': [[False, ['cc']],
-             ['main.cpp']]
+    'cc': [[True, []], ['cc.cppm', 'fused.cppm']],
+    'main': [[False, ['cc']], ['main.cpp']]
 }
 
 targets = {
@@ -128,8 +127,11 @@ class Builder:
             self.secondaries_updated.add(secondary)
 
     def make_sys_modules(self):
-        for module in sys_modules:
+        for module in sys_modules + sys_c_modules:
             target = Builder.join_paths([ self.dirs['sys-bmi'], module + '.pcm' ])
+            if module.endswith('.h'):
+                target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
+
             if not Builder.is_exists(target):
                 eprint('> System BMI:', module)
                 Builder.run(cxx + cxx_flags + ['-Wno-pragma-system-header-outside-header', '--precompile', '-xc++-system-header', module, '-o', target])
@@ -153,7 +155,7 @@ class Builder:
                 objects += [Builder.join_paths([ self.dirs['objects'], primary, Builder.replacesuffixes(file, ['.cpp', '.cppm'], '.o') ])]
 
         Builder.run(cxx + self.type_flags + self.base_flags + ld_flags + extra_flags + objects + ['-o', target_path])
-    
+
     def removesuffixes(path, formers):
         for former in formers:
             path = path.removesuffix(former)
@@ -204,8 +206,10 @@ class Builder:
         self.dirs['sys-bmi'] = Builder.join_paths([ dirs['build'], dirs['sys-bmi'] ])
 
         self.base_flags = []
-        for module in sys_modules:
+        for module in sys_modules + sys_c_modules:
             target = Builder.join_paths([ self.dirs['sys-bmi'], module + '.pcm' ])
+            if module.endswith('.h'):
+                target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
             self.base_flags += ['-fmodule-file=' + target]
 
 
