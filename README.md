@@ -2,8 +2,10 @@
 As the name implies. Goal is to learn and implement everything required from scratch
 
 # Worthwhile annotations
-* HTTP2 library
+* HTTP2
+* TLS1.3
 * 256-bit fixed point numbers
 
 # Todo
 - [ ] verbose debug messages
+- [ ] module map

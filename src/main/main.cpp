@@ -5,23 +5,31 @@ import <cstring>;
 
 import cc;
 import http;
+import tls;
 
-#define STD_EXCEPT(...) throw std::runtime_error(std::format(__VA_ARGS__));
+#define WHAT 1
+
+template<class... Args>
+void enact_std_exception(std::string_view format, Args&&... args)
+{
+	throw std::runtime_error(std::vformat(format, std::make_format_args(args...)));
+}
 
 int main()
 {
-	/*
-	auto c = currency(100.0, currency_t::in);
-	double d = c.get();
-	println("{}", d);
-	*/
-
+#if WHAT == 0
 	http place;
 	try
 	{
-		place.reset("example.org", 80);
-		std::println("GET /: ", place.get("/"));
+		place.reset("fsf.org", 80);
+		std::println("{}", place.get("/"));
 	}
+#elif WHAT == 1
+	tls trial;
+	try
+	{
+	}
+#endif
 	catch (std::exception& e)
 	{
 		std::println(stderr, "Exception caught: {}", e.what());

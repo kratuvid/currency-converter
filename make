@@ -27,20 +27,22 @@ sys_modules = \
 
 # Properties: is module, primary dependencies
 primaries = {
-    'http': [[True, []], ['http.cppm']],
+    'tls': [[True, []], ['tls.cppm']],
+    'http': [[True, ['tls']], ['http.cppm']],
     'cc': [[True, ['http']], ['cc.cppm', 'fused.cppm']],
     'main': [[False, ['cc']], ['main.cpp']]
 }
 
 targets = {
-    'main': [ 'main', 'cc', 'http' ]
+    'main': [ 'main', 'cc', 'http', 'tls' ]
 }
 
 class Builder:
     args_nature = {
         'help': False,
         'release': False,
-        'run': True
+        'run': True,
+        'show': False
     }
 
     def __init__(self):
@@ -58,7 +60,7 @@ class Builder:
                 raise Exception(f'Invalid target {target}')
             target_path = Builder.join_paths([ self.dirs['build'], target ])
             eprint('> Run:', target)
-            Builder.run([target_path])
+            self.run([target_path])
 
     def make_targets(self):
         self.primaries_checked = set()
@@ -75,7 +77,7 @@ class Builder:
                 self.make_primary(primary)
 
             if not Builder.is_exists(target_path) or len(self.primaries_updated) != 0:
-                eprint('> Target:', target)
+                eprint('> Link:', target)
                 self.link(target, [])
 
     def make_primary(self, primary):
@@ -135,7 +137,7 @@ class Builder:
         is_bmi = unit.endswith('.cppm')
 
         if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))) or force:
-            eprint('> Source:', '/'.join([primary, unit]))
+            eprint('> Compile:', '/'.join([primary, unit]))
             self.compile(path, object_path, extra_flags)
             self.secondaries_updated.add(secondary)
 
@@ -146,8 +148,8 @@ class Builder:
                 target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
 
             if not Builder.is_exists(target):
-                eprint('> System BMI:', module)
-                Builder.run(cxx + cxx_flags + ['-Wno-pragma-system-header-outside-header', '--precompile', '-xc++-system-header', module, '-o', target])
+                eprint('> Precompile system BMI:', module)
+                self.run(cxx + cxx_flags + ['-Wno-pragma-system-header-outside-header', '--precompile', '-xc++-system-header', module, '-o', target])
 
     def make_directories(self):
         os.makedirs(self.dirs['build'], exist_ok=True)
@@ -157,7 +159,7 @@ class Builder:
         os.makedirs(self.dirs['sys-bmi'], exist_ok=True)
 
     def compile(self, source, target, extra_flags):
-        Builder.run(cxx + self.type_flags + self.base_flags + cxx_flags + extra_flags + ['-fmodule-output', '-c', source, '-o', target])
+        self.run(cxx + self.type_flags + self.base_flags + cxx_flags + extra_flags + ['-fmodule-output', '-c', source, '-o', target])
 
     def link(self, target, extra_flags):
         target_path = Builder.join_paths([ self.dirs['build'], target ])
@@ -167,7 +169,7 @@ class Builder:
             for file in primaries[primary][1]:
                 objects += [Builder.join_paths([ self.dirs['objects'], primary, Builder.replacesuffixes(file, ['.cpp', '.cppm'], '.o') ])]
 
-        Builder.run(cxx + self.type_flags + self.base_flags + ld_flags + extra_flags + objects + ['-o', target_path])
+        self.run(cxx + self.type_flags + self.base_flags + ld_flags + extra_flags + objects + ['-o', target_path])
 
     def removesuffixes(path, formers):
         for former in formers:
@@ -186,8 +188,9 @@ class Builder:
     def is_exists(path):
         return os.path.exists(path)
 
-    def run(args):
-        eprint(' '.join(args))
+    def run(self, args):
+        if self.show:
+            eprint(' '.join(args))
         status = subprocess.run(args)
         if status.returncode != 0:
             raise Exception(f'Last command failed to code {status.returncode}')
@@ -210,6 +213,8 @@ class Builder:
         if 'help' in self.args:
             eprint(self.args_nature)
             exit(1)
+
+        self.show = 'show' in self.args
 
         self.type = 'release' if 'release' in self.args else 'debug'
         self.type_flags = release_flags if 'release' in self.args else debug_flags

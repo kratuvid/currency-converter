@@ -41,7 +41,7 @@ public:
 				exception::enact("Unexpected address type: {}", addrinfo->h_addrtype);
 			auto al = addrinfo->h_addr_list[0];
 			this->address = htonl(*reinterpret_cast<uint32_t*>(al));
-		} else exception::enact("Cannot resolve '{}': {}", address, strerror(errno));
+		} else exception::enact("Cannot resolve '{}'", site);
 
 		sock = socket(AF_INET, SOCK_STREAM, 0);
 		if (sock == -1)
