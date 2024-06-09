@@ -19,7 +19,8 @@ int main()
 	http place;
 	try
 	{
-		place.reset("gnu.org", 80);
+		place.reset("example.org", 80);
+		std::println("GET /: ", place.get("/"));
 	}
 	catch (std::exception& e)
 	{

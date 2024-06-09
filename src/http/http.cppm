@@ -61,6 +61,11 @@ public:
 			close(sock);
 	}
 
+	std::string get(std::string_view location)
+	{
+		return "";
+	}
+
 public:
 	class exception : public std::runtime_error
 	{
