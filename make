@@ -83,6 +83,7 @@ class Builder:
             primary_miu = primary_sources[0]
             module_flags = []
 
+            prev_su = len(self.secondaries_updated)
             for unit_index in range(1, len(primary_sources)):
                 source = primary_sources[unit_index]
                 if source.endswith('.cppm'):
@@ -91,8 +92,10 @@ class Builder:
                     bmi_path = Builder.join_paths([ self.dirs['objects'], primary, basename + '.pcm' ])
                     module_flags += ['-fmodule-file=' + bmi_name + '=' + bmi_path]
                 self.make_secondary((primary, source), self.module_flags)
+            now_su = len(self.secondaries_updated)
 
-            self.make_secondary((primary, primary_miu), self.module_flags + module_flags)
+            force = True if now_su > prev_su else False
+            self.make_secondary((primary, primary_miu), self.module_flags + module_flags, force)
 
             bmi_path = Builder.join_paths([ self.dirs['objects'], primary, primary + '.pcm' ])
             module_flags += ['-fmodule-file=' + primary + '=' + bmi_path]
@@ -105,7 +108,7 @@ class Builder:
         if len(self.secondaries_updated) != 0:
             self.primaries_updated.add(primary)
 
-    def make_secondary(self, secondary, extra_flags):
+    def make_secondary(self, secondary, extra_flags, force=False):
         if secondary in self.secondaries_checked:
             return
         self.secondaries_checked.add(secondary)
@@ -119,7 +122,7 @@ class Builder:
         bmi_path = Builder.join_paths([ self.dirs['objects'], primary, basename + '.pcm' ])
         is_bmi = unit.endswith('.cppm')
 
-        if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))):
+        if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))) or force:
             eprint('> Source:', '/'.join([primary, unit]))
             self.compile(path, object_path, extra_flags)
             self.secondaries_updated.add(secondary)
