@@ -21,17 +21,19 @@ cxx = ['clang++']
 cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-header-units']
 ld_flags = []
 
-sys_modules = ['cstdint', 'print', 'exception', 'format', 'cstring'] \
-    + ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h']
+sys_modules = \
+    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view'] + \
+    ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h', 'netdb.h']
 
 # Properties: is module, primary dependencies
 primaries = {
-    'cc': [[True, []], ['cc.cppm', 'fused.cppm']],
+    'http': [[True, []], ['http.cppm']],
+    'cc': [[True, ['http']], ['cc.cppm', 'fused.cppm']],
     'main': [[False, ['cc']], ['main.cpp']]
 }
 
 targets = {
-    'main': [ 'main', 'cc' ]
+    'main': [ 'main', 'cc', 'http' ]
 }
 
 class Builder:
