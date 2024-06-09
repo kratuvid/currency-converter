@@ -21,8 +21,8 @@ cxx = ['clang++']
 cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-header-units']
 ld_flags = []
 
-sys_modules = ['cstdint', 'print']
-sys_c_modules = ['stdio.h', 'sys/types.h']
+sys_modules = ['cstdint', 'print', 'exception', 'format', 'cstring'] \
+    + ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h']
 
 # Properties: is module, primary dependencies
 primaries = {
@@ -37,7 +37,8 @@ targets = {
 class Builder:
     args_nature = {
         'help': False,
-        'release': False
+        'release': False,
+        'run': True
     }
 
     def __init__(self):
@@ -46,6 +47,16 @@ class Builder:
         self.make_directories()
         self.make_sys_modules()
         self.make_targets()
+        self.run_targets()
+
+    def run_targets(self):
+        if 'run' in self.args:
+            target = self.args['run']
+            if target not in targets:
+                raise Exception(f'Invalid target {target}')
+            target_path = Builder.join_paths([ self.dirs['build'], target ])
+            eprint('> Run:', target)
+            Builder.run([target_path])
 
     def make_targets(self):
         self.primaries_checked = set()
@@ -127,7 +138,7 @@ class Builder:
             self.secondaries_updated.add(secondary)
 
     def make_sys_modules(self):
-        for module in sys_modules + sys_c_modules:
+        for module in sys_modules:
             target = Builder.join_paths([ self.dirs['sys-bmi'], module + '.pcm' ])
             if module.endswith('.h'):
                 target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
@@ -206,7 +217,7 @@ class Builder:
         self.dirs['sys-bmi'] = Builder.join_paths([ dirs['build'], dirs['sys-bmi'] ])
 
         self.base_flags = []
-        for module in sys_modules + sys_c_modules:
+        for module in sys_modules:
             target = Builder.join_paths([ self.dirs['sys-bmi'], module + '.pcm' ])
             if module.endswith('.h'):
                 target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
@@ -214,4 +225,8 @@ class Builder:
 
 
 if __name__ == '__main__':
-    instance = Builder()
+    try:
+        instance = Builder()
+    except Exception as e:
+        eprint('Exception caught:', e)
+        exit(1)
