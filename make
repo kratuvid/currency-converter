@@ -111,7 +111,7 @@ class Builder:
                     bmi_name = primary + ':' + basename
                     bmi_path = Builder.join_paths([ self.dirs['objects'], primary, basename + '.pcm' ])
                     module_flags += ['-fmodule-file=' + bmi_name + '=' + bmi_path]
-                self.make_secondary((primary, source), self.module_flags)
+                self.make_secondary((primary, source), self.module_flags, force)
             now_su = len(self.secondaries_updated)
 
             force_internal = True if (now_su > prev_su or force) else False
