@@ -1,33 +1,53 @@
 export module fused;
 
-import <format>;
+import <cstddef>;
+import <cstdint>;
 import <exception>;
+import <format>;
 import <limits>;
 import <typeinfo>;
-import <cstdint>;
 
-export class fused
+export template<size_t LEN_base>
+class fused
 {
 private:
-	// integer occupies the first half and fractions rest
+	static constexpr size_t LEN = LEN_base * 2, SZ = LEN * sizeof(uint64_t), SZ_bits = SZ * 8;
+
 	struct __attribute__ ((__packed__)) {
-		uint64_t a, b, c, d;
+		uint64_t integer[LEN_base], fraction[LEN_base];
 	} store;
+	uint64_t* ptr = store.integer;
+	const uint64_t* ptr_const = store.integer;
 
 public:
 	fused()
-		:store {0, 0, 0, 0}
 	{
+		static_assert(LEN_base >= 1);
+		zeroes();
 	}
 
-	fused(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
-		:store {a, b, c, d}
-	{}
+	template<class... Args>
+	fused(Args... args)
+	{
+		load(args...);
+	}
 
 	template<class T>
 	fused(T source)
 	{
 		ifrom(source);
+	}
+
+	const uint64_t* get_store() const
+	{
+		return store.integer;
+	}
+
+	template<class... Args>
+	void load(Args... args)
+	{
+		static_assert(sizeof...(args) == LEN);
+		load_recursive(args...);
 	}
 
 	template<class T>
@@ -46,18 +66,20 @@ public:
 		return to(*this);
 	}
 
+	void constant(uint64_t value)
+	{
+		for (size_t i = 0; i < LEN; i++)
+			*(ptr + i) = value;
+	}
+
 	void zeroes()
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		for (unsigned i = 0; i < 4; i++, ptr++)
-			*ptr = 0;
+		constant(0);
 	}
 
 	void ones()
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		for (unsigned i = 0; i < 4; i++, ptr++)
-			*ptr = ~uint64_t(0);
+		constant(~uint64_t(0));
 	}
 
 	fused operator*(const fused& rhs)
@@ -70,15 +92,15 @@ public:
 
 	fused& operator+=(const fused& rhs)
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		auto ptr_rhs = reinterpret_cast<const uint64_t*>(&rhs.store);
+		auto ptr_rhs = rhs.ptr_const;
 
 		uint64_t carry = 0;
-		for (int i=3; i >= 0; i--)
+		for (ssize_t i = LEN-1; i >= 0; i--)
 		{
 			const bool neg = ptr[i] >> 63, neg_rhs = ptr_rhs[i] >> 63;
 			ptr[i] += ptr_rhs[i] + carry;
 			const bool neg_result = ptr[i] >> 63;
+
 			if (neg && neg_rhs && !neg_result)
 			{
 				ptr[i] |= uint64_t(1) << 63;
@@ -91,6 +113,7 @@ public:
 			}
 			else carry = 0;
 		}
+
 		return *this;
 	}
 
@@ -117,14 +140,14 @@ public:
 		return copy -= rhs;
 	}
 
-	fused& operator>>=(unsigned times)
+	fused& operator>>=(size_t times)
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		auto real_times = times > 256 ? 256 : times;
-		for (int i=0; i < real_times; i++)
+		const size_t real_times = times > SZ_bits ? SZ_bits : times;
+
+		for (size_t i=0; i < real_times; i++)
 		{
 			uint64_t saved_bit = 0;
-			for (int j=0; j < 4; j++)
+			for (size_t j=0; j < LEN; j++)
 			{
 				const uint64_t next_saved_bit = static_cast<bool>(ptr[j] & 0x1);
 				ptr[j] >>= 1;
@@ -132,17 +155,18 @@ public:
 				saved_bit = next_saved_bit;
 			}
 		}
+
 		return *this;
 	}
 
-	fused& operator<<=(unsigned times)
+	fused& operator<<=(size_t times)
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		auto real_times = times > 256 ? 256 : times;
-		for (int i=0; i < real_times; i++)
+		const size_t real_times = times > SZ_bits ? SZ_bits : times;
+
+		for (size_t i=0; i < real_times; i++)
 		{
 			uint64_t saved_bit = 0;
-			for (int j=3; j >= 0; j--)
+			for (ssize_t j = LEN-1; j >= 0; j--)
 			{
 				const uint64_t next_saved_bit = static_cast<bool>(ptr[j] & (uint64_t(1) << 63));
 				ptr[j] <<= 1;
@@ -150,40 +174,41 @@ public:
 				saved_bit = next_saved_bit;
 			}
 		}
+
 		return *this;
 	}
 
 	fused& negate()
 	{
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
-		for (int i=0; i < 4; i++)
+		for (size_t i=0; i < LEN; i++)
 			ptr[i] = ~ptr[i];
-		return *this += fused(0, 0, 0, 1);
+
+		fused<LEN_base> last_one;
+		*(last_one.ptr + (LEN-1)) = 1;
+
+		return *this += last_one;
 	}
 
 	bool is_negative() const
 	{
-		return store.a >> 63;
+		return store.integer[0] >> 63;
 	}
 
-	uint64_t bit(unsigned i) const
+	uint64_t bit(size_t i) const
 	{
 		const auto unit = i / 64, at = i % 64, at_real = 63 - at;
-		auto ptr = reinterpret_cast<const uint64_t*>(&store);
 		return (ptr[unit] >> at_real) & 0x1;
 	}
 
-	void bit_set(unsigned i)
+	void bit_set(size_t i)
 	{
 		const auto unit = i / 64, at = i % 64, at_real = 63 - at;
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
 		ptr[unit] |= 1 << at_real;
 	}
 	
-	void bit_clear(unsigned i)
+	void bit_clear(size_t i)
 	{
 		const auto unit = i / 64, at = i % 64, at_real = 63 - at;
-		auto ptr = reinterpret_cast<uint64_t*>(&store);
 		ptr[unit] &= ~(1 << at_real);
 	}
 
@@ -209,6 +234,18 @@ public:
 	}
 
 private:
+	template<class Head, class... Rest>
+	void load_recursive(Head head, Rest... rest)
+	{
+		static_assert(typeid(Head) == typeid(uint64_t));
+
+		const size_t index = (LEN_base * 2) - (1 + sizeof...(rest));
+		*(ptr + index) = head;
+
+		if constexpr (sizeof...(rest) > 0)
+			load_recursive(rest...);
+	}
+	
 	template<class T, class Ti, class Tsi>
 	static void are_valid_conversion_types()
 	{
@@ -224,22 +261,24 @@ private:
 	{
 		are_valid_conversion_types<T, Ti, Tsi>();
 
-		const std::size_t sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
+		const size_t \
+			sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
 			sz_fraction = typeid(T) == typeid(float) ? 23 : 52,
 			sz_all = sizeof(T) * 8, sz_left = 64 - sz_all;
+
 		const Tsi exp_bias = typeid(T) == typeid(float) ? 127 : 1023;
 		const Ti exp_max = typeid(T) == typeid(float) ? 0xff : 0x7ff;
 
-		auto ptr = reinterpret_cast<const Ti*>(&source);
-		const Ti sign = *ptr >> (sz_exponent + sz_fraction);
-		const Ti exponent = (*ptr << 1) >> (sz_fraction + 1);
-		const Ti fraction = (*ptr << (sz_exponent + 1)) >> (sz_exponent + 1);
+		auto ptr_source = reinterpret_cast<const Ti*>(&source);
+		const Ti sign = *ptr_source >> (sz_exponent + sz_fraction);
+		const Ti exponent = (*ptr_source << 1) >> (sz_fraction + 1);
+		const Ti fraction = (*ptr_source << (sz_exponent + 1)) >> (sz_exponent + 1);
 		const Tsi normalised_exponent = exponent - exp_bias;
 
 		fused converted; // initialized to zero by the default constructor
 
 		bool did_work = false;
-		if (*ptr == 0 || *ptr == Ti(1) << (sz_all-1)) // zero
+		if (*ptr_source == 0 || *ptr_source == Ti(1) << (sz_all-1)) // zero
 		{
 			// already zero
 		}
@@ -249,13 +288,13 @@ private:
 		}
 		else if (exponent == 0 && fraction != 0) // subnormal
 		{
-			converted.store.c = uint64_t(fraction) << (sz_exponent + sz_left + 1);
+			converted.store.fraction[0] = uint64_t(fraction) << (sz_exponent + sz_left + 1);
 			did_work = true;
 		}
 		else // normal
 		{
-			converted.store.b = 1;
-			converted.store.c = uint64_t(fraction) << (sz_exponent + sz_left + 1);
+			converted.store.integer[LEN_base-1] = 1;
+			converted.store.fraction[0] = uint64_t(fraction) << (sz_exponent + sz_left + 1);
 			if (normalised_exponent >= 0)
 				converted <<= normalised_exponent;
 			else
@@ -274,17 +313,19 @@ private:
 	{
 		are_valid_conversion_types<T, Ti, Tsi>();
 
-		const std::size_t sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
+		const size_t \
+			sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
 			sz_fraction = typeid(T) == typeid(float) ? 23 : 52,
 			sz_all = sizeof(T) * 8;
+
 		const Tsi exp_bias = typeid(T) == typeid(float) ? 127 : 1023;
 
-		const auto neg = source.is_negative();
+		const bool neg = source.is_negative();
 		if (neg)
 			source.negate();
 
-		int first_one = -1;
-		for (int i=0; i < 256; i++)
+		ssize_t first_one = -1;
+		for (size_t i=0; i < SZ_bits; i++)
 		{
 			if (source.bit(i))
 			{
@@ -294,7 +335,7 @@ private:
 		}
 
 		T converted = 0;
-		auto ptr = reinterpret_cast<Ti*>(&converted);
+		auto ptr_converted = reinterpret_cast<Ti*>(&converted);
 
 		if (first_one == -1) // zero
 		{
@@ -303,18 +344,18 @@ private:
 		else
 		{
 			const Ti sign = neg;
-			const Tsi normalised_exponent = 127 - first_one;
+			const Tsi normalised_exponent = ((SZ_bits / 2) - 1) - first_one;
 			const Ti exponent = normalised_exponent + exp_bias;
 			Ti fraction = 0;
 
-			int i = first_one + 1;
-			for (int j = sz_fraction-1; j >= 0 && i < 256; j--, i++)
+			ssize_t i = first_one + 1;
+			for (ssize_t j = sz_fraction-1; j >= 0 && i < SZ_bits; j--, i++)
 			{
 				const Ti bit = static_cast<bool>(source.bit(i));
 				fraction |= bit << j;
 			}
 
-			*ptr = (sign << (sz_exponent + sz_fraction)) | (exponent << sz_fraction) | fraction;
+			*ptr_converted = (sign << (sz_exponent + sz_fraction)) | (exponent << sz_fraction) | fraction;
 		}
 
 		return converted;

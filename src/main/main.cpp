@@ -10,7 +10,7 @@ import tls;
 import hash;
 import fused;
 
-#define WHAT 3
+#define WHAT 4
 
 template<class... Args>
 void enact_std_exception(std::string_view format, Args&&... args)
@@ -52,6 +52,18 @@ int main()
 		auto d1 = f1.ito(), d2 = f2.ito();
 		auto dp = fp.ito();
 		std::println("{} * {} = {} (actuual {})", d1, d2, dp, i1 * i2);
+	}
+#elif WHAT == 4
+	try
+	{
+		using fused_local = fused<10>;
+
+		double i1, i2;
+		std::print("Two double please: ");
+		std::cin >> i1 >> i2;
+		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2);
+		auto d1 = f1.ito(), d2 = f2.ito();
+		std::println("{}, {}", d1, d2);
 	}
 #endif
 	catch (std::exception& e)

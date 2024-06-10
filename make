@@ -23,7 +23,8 @@ cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-head
 ld_flags = []
 
 sys_modules = \
-    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string', 'iostream', 'typeinfo', 'limits'] + \
+    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string', 'iostream',
+     'typeinfo', 'limits', 'cstddef'] + \
     ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h', 'netdb.h']
 
 # Properties: is module, primary dependencies
