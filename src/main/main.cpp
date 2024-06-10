@@ -6,8 +6,9 @@ import <cstring>;
 import cc;
 import http;
 import tls;
+import hash;
 
-#define WHAT 1
+#define WHAT 2
 
 template<class... Args>
 void enact_std_exception(std::string_view format, Args&&... args)
@@ -28,6 +29,13 @@ int main()
 	tls trial;
 	try
 	{
+	}
+#elif WHAT == 2
+	try
+	{
+		std::string_view input = "subject";
+		hash compressed(input);
+		std::println("'{}' = {}", input, compressed.str());
 	}
 #endif
 	catch (std::exception& e)

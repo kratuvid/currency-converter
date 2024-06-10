@@ -4,8 +4,19 @@ As the name implies. Goal is to learn and implement everything required from scr
 # Worthwhile annotations
 * HTTP2
 * TLS1.3
+* Hash
 * 256-bit fixed point numbers
 
-# Todo
+# Generic Todo
 - [ ] verbose debug messages
 - [ ] module map
+
+# HTTP2 Todo
+- [ ] learn how it works
+
+# TLS1.3 Todo
+- [ ] learn how it works
+
+# Hash Todo
+- [ ] learn how sha1 works
+- [ ] learn how sha256 works
