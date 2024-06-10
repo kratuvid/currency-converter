@@ -2,13 +2,15 @@ import <print>;
 import <format>;
 import <exception>;
 import <cstring>;
+import <iostream>;
 
 import cc;
 import http;
 import tls;
 import hash;
+import fused;
 
-#define WHAT 2
+#define WHAT 3
 
 template<class... Args>
 void enact_std_exception(std::string_view format, Args&&... args)
@@ -33,9 +35,21 @@ int main()
 #elif WHAT == 2
 	try
 	{
-		std::string_view input = "subject";
+		std::print("Hash of what? ");
+		std::string input;
+		std::getline(std::cin, input);
 		hash compressed(input);
 		std::println("'{}' = {}", input, compressed.str());
+	}
+#elif WHAT == 3
+	try
+	{
+		double input;
+		std::print("Double please: ");
+		std::cin >> input;
+		auto f = fused::from(input);
+		auto d = f.ito();
+		std::println("What you probably entered: {}", d);
 	}
 #endif
 	catch (std::exception& e)

@@ -22,20 +22,21 @@ cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-head
 ld_flags = []
 
 sys_modules = \
-    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string'] + \
+    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string', 'iostream'] + \
     ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h', 'netdb.h']
 
 # Properties: is module, primary dependencies
 primaries = {
+    'fused': [[True, []], ['fused.cppm']],
     'hash': [[True, []], ['hash.cppm']],
     'tls': [[True, ['hash']], ['tls.cppm']],
     'http': [[True, ['tls']], ['http.cppm']],
-    'cc': [[True, ['http']], ['cc.cppm', 'fused.cppm']],
-    'main': [[False, ['cc', 'hash']], ['main.cpp']]
+    'cc': [[True, ['http', 'fused']], ['cc.cppm']],
+    'main': [[False, ['cc', 'fused']], ['main.cpp']]
 }
 
 targets = {
-    'main': [ 'main', 'cc', 'http', 'tls', 'hash' ]
+    'main': [ 'main', 'cc', 'http', 'tls', 'hash', 'fused' ]
 }
 
 class Builder:

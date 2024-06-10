@@ -1,7 +1,8 @@
 export module cc;
-export import :fused;
 
 import <cstdint>;
+
+import fused;
 
 export enum currency_t
 {
@@ -11,7 +12,7 @@ export enum currency_t
 export class currency
 {
 private:
-	fused_t value;
+	fused value;
 	currency_t type;
 	
 public:
@@ -19,7 +20,7 @@ public:
 		:type(currency_t::in), value(0)
 	{}
 	
-	currency(fused_t value, currency_t type)
+	currency(fused value, currency_t type)
 		:value(value), type(type)
 	{}
 
@@ -32,22 +33,22 @@ public:
 public:
 	void load(double value)
 	{
-		this->value = fused_t::from(value);
+		this->value = fused::from(value);
 	}
 	void get(double& value)
 	{
-		value = fused_t::to(this->value);
+		value = fused::to(this->value);
 	}
 	double get()
 	{
-		return fused_t::to(this->value);
+		return fused::to(this->value);
 	}
 
-	void load(fused_t value)
+	void load(fused value)
 	{
 		this->value = value;
 	}
-	void get(fused_t& value)
+	void get(fused& value)
 	{
 		value = this->value;
 	}
