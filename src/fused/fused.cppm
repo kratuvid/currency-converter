@@ -1,5 +1,7 @@
 export module fused;
 
+import <format>;
+import <exception>;
 import <limits>;
 import <typeinfo>;
 import <cstdint>;
@@ -42,6 +44,28 @@ public:
 	double ito() const
 	{
 		return to(*this);
+	}
+
+	void zeroes()
+	{
+		auto ptr = reinterpret_cast<uint64_t*>(&store);
+		for (unsigned i = 0; i < 4; i++, ptr++)
+			*ptr = 0;
+	}
+
+	void ones()
+	{
+		auto ptr = reinterpret_cast<uint64_t*>(&store);
+		for (unsigned i = 0; i < 4; i++, ptr++)
+			*ptr = ~uint64_t(0);
+	}
+
+	fused operator*(const fused& rhs)
+	{
+		exception::enact("Multiplication is unimplemented");
+
+		fused product;
+		return product;
 	}
 
 	fused& operator+=(const fused& rhs)
@@ -162,94 +186,6 @@ public:
 		auto ptr = reinterpret_cast<uint64_t*>(&store);
 		ptr[unit] &= ~(1 << at_real);
 	}
-
-public:
-	/*
-	static fused from(double source)
-	{
-		const auto sz_exponent = 11, sz_fraction = 52;
-
-		auto ptr = reinterpret_cast<const uint64_t*>(&source);
-		const uint64_t sign = *ptr >> 63;
-		const uint64_t exponent = (*ptr << 1) >> (sz_fraction + 1);
-		const uint64_t fraction = (*ptr << (sz_exponent + 1)) >> (sz_exponent + 1);
-		const int64_t normalised_exponent = exponent - 1023;
-
-		fused converted; // initialized to zero by the default constructor
-
-		if (*ptr == 0) // zero
-		{
-			// already zero
-		}
-		else if (exponent == 0x7ff) // infinity and nan
-		{
-			// do nothing
-		}
-		else if (exponent == 0 && fraction != 0) // subnormal
-		{
-			converted.store.c = fraction << (sz_exponent + 1);
-		}
-		else // normal
-		{
-			converted.store.b = 1;
-			converted.store.c = fraction << (sz_exponent + 1);
-			if (normalised_exponent >= 0)
-				converted <<= normalised_exponent;
-			else
-				converted >>= -normalised_exponent;
-		}
-
-		if (sign)
-			converted.negate();
-
-		return converted;
-	}
-	
-	static double to(fused source)
-	{
-		const auto sz_exponent = 11, sz_fraction = 52;
-
-		const auto neg = source.is_negative();
-		if (neg)
-			source.negate();
-
-		int first_one = -1;
-		for (unsigned i=0; i < 256; i++)
-		{
-			if (source.bit(i))
-			{
-				first_one = i;
-				break;
-			}
-		}
-
-		double converted = 0;
-		auto ptr = reinterpret_cast<uint64_t*>(&converted);
-
-		if (first_one == -1) // zero
-		{
-			// already zero
-		}
-		else
-		{
-			const uint64_t sign = neg;
-			const int64_t normalised_exponent = 127 - first_one;
-			const uint64_t exponent = normalised_exponent + 1023;
-			uint64_t fraction = 0;
-
-			int i = first_one + 1;
-			for (int j = 51; j >= 0 && i < 256; j--, i++)
-			{
-				const uint64_t bit = static_cast<bool>(source.bit(i));
-				fraction |= bit << j;
-			}
-
-			*ptr = (sign << (sz_exponent+sz_fraction)) | (exponent << sz_fraction) | fraction;
-		}
-
-		return converted;
-	}
-	*/
 
 public:
 	static fused from(float source)
@@ -383,4 +319,19 @@ private:
 
 		return converted;
 	}
+
+public:
+	class exception : public std::runtime_error
+	{
+	public:
+		exception(std::string_view msg) :std::runtime_error(msg.data()) {}
+
+		template<class... Args>
+		static void enact(std::string_view format, Args&&... args)
+		{
+			std::string format_real("fused: ");
+			format_real += format;
+			throw exception(std::vformat(format_real, std::make_format_args<Args...>(args...)));
+		}
+	};
 };

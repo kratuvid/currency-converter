@@ -85,7 +85,7 @@ class Builder:
                 begin = time.time()
                 self.link(target, [])
                 end = time.time()
-                eprint(f'- {end-begin:.4e}s')
+                eprint(f'- {end-begin:.3e}s')
 
     def make_primary(self, primary, force=False):
         if primary in self.primaries_checked:
@@ -154,7 +154,7 @@ class Builder:
                 self.precompile(path, bmi_path, extra_flags)
             self.compile(path, object_path, extra_flags)
             end = time.time()
-            eprint(f'- {end-begin:.4e}s')
+            eprint(f'- {end-begin:.3e}s')
             self.secondaries_updated.add(secondary)
 
     def make_sys_modules(self):
@@ -168,7 +168,7 @@ class Builder:
                 begin = time.time()
                 self.run(cxx + cxx_flags + ['-Wno-pragma-system-header-outside-header', '--precompile', '-xc++-system-header', module, '-o', target])
                 end = time.time()
-                eprint(f'- {end-begin:.4e}s')
+                eprint(f'- {end-begin:.3e}s')
 
     def make_directories(self):
         os.makedirs(self.dirs['build'], exist_ok=True)
@@ -215,7 +215,7 @@ class Builder:
             eprint(' '.join(args))
         status = subprocess.run(args)
         if status.returncode != 0:
-            raise Exception(f'Last command failed to code {status.returncode}')
+            raise Exception(f'Last command failed with code {status.returncode}')
 
     def handle_arguments(self):
         i = 1

@@ -44,12 +44,14 @@ int main()
 #elif WHAT == 3
 	try
 	{
-		double input;
-		std::print("Double please: ");
-		std::cin >> input;
-		auto f = fused::from(input);
-		auto d = f.ito();
-		std::println("What you probably entered: {}", d);
+		double i1, i2;
+		std::print("Two double please: ");
+		std::cin >> i1 >> i2;
+		auto f1 = fused::from(i1), f2 = fused::from(i2);
+		auto fp = f2 * f2;
+		auto d1 = f1.ito(), d2 = f2.ito();
+		auto dp = fp.ito();
+		std::println("{} * {} = {} (actuual {})", d1, d2, dp, i1 * i2);
 	}
 #endif
 	catch (std::exception& e)
