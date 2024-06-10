@@ -5,7 +5,7 @@ As the name implies. Goal is to learn and implement everything required from scr
 * HTTP2
 * TLS1.3
 * Hash
-* 256-bit fixed point numbers
+* 128b.128b fixed point numbers
 
 # Generic Todo
 - [ ] verbose debug messages

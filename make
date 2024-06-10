@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import subprocess
 import os
 import sys
@@ -80,8 +81,11 @@ class Builder:
                 self.make_primary(primary, self.force)
 
             if not Builder.is_exists(target_path) or len(self.primaries_updated) != 0 or self.force:
-                eprint('> Link:', target)
+                eprint('> Link:', target, end=' ')
+                begin = time.time()
                 self.link(target, [])
+                end = time.time()
+                eprint(f'- {end-begin:.4e}s')
 
     def make_primary(self, primary, force=False):
         if primary in self.primaries_checked:
@@ -144,10 +148,13 @@ class Builder:
         is_bmi = unit.endswith('.cppm')
 
         if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))) or force:
-            eprint('> Compile:', '/'.join([primary, unit]))
+            eprint('> Compile:', '/'.join([primary, unit]), end=' ')
+            begin = time.time()
             if is_bmi:
                 self.precompile(path, bmi_path, extra_flags)
             self.compile(path, object_path, extra_flags)
+            end = time.time()
+            eprint(f'- {end-begin:.4e}s')
             self.secondaries_updated.add(secondary)
 
     def make_sys_modules(self):
@@ -157,8 +164,11 @@ class Builder:
                 target = Builder.join_paths([ self.dirs['sys-bmi'], module.replace('/', '-').removesuffix('.h') + '.pcm' ])
 
             if not Builder.is_exists(target):
-                eprint('> Precompile system BMI:', module)
+                eprint('> Precompile system BMI:', module, end=' ')
+                begin = time.time()
                 self.run(cxx + cxx_flags + ['-Wno-pragma-system-header-outside-header', '--precompile', '-xc++-system-header', module, '-o', target])
+                end = time.time()
+                eprint(f'- {end-begin:.4e}s')
 
     def make_directories(self):
         os.makedirs(self.dirs['build'], exist_ok=True)
