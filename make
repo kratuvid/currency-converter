@@ -44,7 +44,8 @@ class Builder:
         'help': False,
         'release': False,
         'run': True,
-        'show': False
+        'show': False,
+        'rebuild': False
     }
 
     def __init__(self):
@@ -76,14 +77,14 @@ class Builder:
                 self.secondaries_updated = set()
                 self.module_flags = []
 
-                self.make_primary(primary)
+                self.make_primary(primary, self.force)
 
-            if not Builder.is_exists(target_path) or len(self.primaries_updated) != 0:
+            if not Builder.is_exists(target_path) or len(self.primaries_updated) != 0 or self.force:
                 eprint('> Link:', target)
                 self.link(target, [])
 
     def make_primary(self, primary, force=False):
-        if primary in self.primaries_checked and not force:
+        if primary in self.primaries_checked:
             return
         self.primaries_checked.add(primary)
 
@@ -129,7 +130,7 @@ class Builder:
             self.primaries_updated.add(primary)
 
     def make_secondary(self, secondary, extra_flags, force=False):
-        if secondary in self.secondaries_checked and not force:
+        if secondary in self.secondaries_checked:
             return
         self.secondaries_checked.add(secondary)
 
@@ -227,6 +228,7 @@ class Builder:
             exit(1)
 
         self.show = 'show' in self.args
+        self.force = 'rebuild' in self.args
 
         self.type = 'release' if 'release' in self.args else 'debug'
         self.type_flags = release_flags if 'release' in self.args else debug_flags
