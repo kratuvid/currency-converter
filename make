@@ -144,10 +144,9 @@ class Builder:
         is_bmi = unit.endswith('.cppm')
 
         if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))) or force:
-            if is_bmi:
-                eprint('> Precompile BMI:', '/'.join([primary, unit]))
-                self.precompile(path, bmi_path, extra_flags)
             eprint('> Compile:', '/'.join([primary, unit]))
+            if is_bmi:
+                self.precompile(path, bmi_path, extra_flags)
             self.compile(path, object_path, extra_flags)
             self.secondaries_updated.add(secondary)
 
