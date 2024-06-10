@@ -22,7 +22,7 @@ cxx_flags = ['-fdiagnostics-color=always', '-std=c++23', '-Wno-experimental-head
 ld_flags = []
 
 sys_modules = \
-    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string', 'iostream'] + \
+    ['cstdint', 'print', 'exception', 'format', 'cstring', 'string_view', 'string', 'iostream', 'typeinfo', 'limits'] + \
     ['stdio.h', 'sys/socket.h', 'unistd.h', 'netinet/in.h', 'netdb.h']
 
 # Properties: is module, primary dependencies
@@ -139,6 +139,9 @@ class Builder:
         is_bmi = unit.endswith('.cppm')
 
         if (not Builder.is_exists(object_path) or Builder.is_later(path, object_path)) or (is_bmi and (not Builder.is_exists(bmi_path) or Builder.is_later(path, bmi_path))) or force:
+            if is_bmi:
+                eprint('> Precompile BMI:', '/'.join([primary, unit]))
+                self.precompile(path, bmi_path, extra_flags)
             eprint('> Compile:', '/'.join([primary, unit]))
             self.compile(path, object_path, extra_flags)
             self.secondaries_updated.add(secondary)
@@ -160,8 +163,11 @@ class Builder:
             os.makedirs(Builder.join_paths([ self.dirs['objects'], primary ]), exist_ok=True)
         os.makedirs(self.dirs['sys-bmi'], exist_ok=True)
 
+    def precompile(self, source, target, extra_flags):
+        self.run(cxx + self.type_flags + self.base_flags + cxx_flags + extra_flags + ['--precompile', source, '-o', target])
+
     def compile(self, source, target, extra_flags):
-        self.run(cxx + self.type_flags + self.base_flags + cxx_flags + extra_flags + ['-fmodule-output', '-c', source, '-o', target])
+        self.run(cxx + self.type_flags + self.base_flags + cxx_flags + extra_flags + ['-c', source, '-o', target])
 
     def link(self, target, extra_flags):
         target_path = Builder.join_paths([ self.dirs['build'], target ])

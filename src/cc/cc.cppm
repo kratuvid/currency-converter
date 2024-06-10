@@ -17,7 +17,7 @@ private:
 	
 public:
 	currency()
-		:type(currency_t::in), value(0)
+		:type(currency_t::in), value(0.f)
 	{}
 	
 	currency(fused value, currency_t type)

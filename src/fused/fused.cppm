@@ -1,5 +1,7 @@
 export module fused;
 
+import <limits>;
+import <typeinfo>;
 import <cstdint>;
 
 export class fused
@@ -20,22 +22,28 @@ public:
 		:store {a, b, c, d}
 	{}
 
-	fused(double source)
+	template<class T>
+	fused(T source)
 	{
 		ifrom(source);
 	}
 
-	fused& ifrom(double source)
+	template<class T>
+	fused& ifrom(T source)
 	{
-		*this = from(source);
-		return *this;
+		return *this = from(source);
+	}
+
+	float itof() const
+	{
+		return tof(*this);
 	}
 
 	double ito() const
 	{
 		return to(*this);
 	}
-	
+
 	fused& operator+=(const fused& rhs)
 	{
 		auto ptr = reinterpret_cast<uint64_t*>(&store);
@@ -156,6 +164,7 @@ public:
 	}
 
 public:
+	/*
 	static fused from(double source)
 	{
 		const auto sz_exponent = 11, sz_fraction = 52;
@@ -195,7 +204,7 @@ public:
 
 		return converted;
 	}
-
+	
 	static double to(fused source)
 	{
 		const auto sz_exponent = 11, sz_fraction = 52;
@@ -236,6 +245,140 @@ public:
 			}
 
 			*ptr = (sign << (sz_exponent+sz_fraction)) | (exponent << sz_fraction) | fraction;
+		}
+
+		return converted;
+	}
+	*/
+
+public:
+	static fused from(float source)
+	{
+		return fused::from_raw<float, uint32_t, int32_t>(source);
+	}
+
+	static fused from(double source)
+	{
+		return fused::from_raw<double, uint64_t, int64_t>(source);
+	}
+
+	static float tof(fused source)
+	{
+		return fused::to_raw<float, uint32_t, int32_t>(source);
+	}
+
+	static double to(fused source)
+	{
+		return fused::to_raw<double, uint64_t, int64_t>(source);
+	}
+
+private:
+	template<class T, class Ti, class Tsi>
+	static void are_valid_conversion_types()
+	{
+		static_assert(std::numeric_limits<T>::is_iec559);
+		static_assert(sizeof(T) == sizeof(Ti) && !std::numeric_limits<Ti>::is_signed && !std::numeric_limits<Ti>::is_iec559);
+		static_assert(sizeof(T) == sizeof(Tsi) && std::numeric_limits<Tsi>::is_signed && !std::numeric_limits<Tsi>::is_iec559);
+		static_assert((typeid(T) == typeid(float) && sizeof(float) == 4) ||
+					  (typeid(T) == typeid(double) && sizeof(double) == 8));
+	}
+
+	template<class T, class Ti, class Tsi>
+	static fused from_raw(T source)
+	{
+		are_valid_conversion_types<T, Ti, Tsi>();
+
+		const std::size_t sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
+			sz_fraction = typeid(T) == typeid(float) ? 23 : 52,
+			sz_all = sizeof(T) * 8, sz_left = 64 - sz_all;
+		const Tsi exp_bias = typeid(T) == typeid(float) ? 127 : 1023;
+		const Ti exp_max = typeid(T) == typeid(float) ? 0xff : 0x7ff;
+
+		auto ptr = reinterpret_cast<const Ti*>(&source);
+		const Ti sign = *ptr >> (sz_exponent + sz_fraction);
+		const Ti exponent = (*ptr << 1) >> (sz_fraction + 1);
+		const Ti fraction = (*ptr << (sz_exponent + 1)) >> (sz_exponent + 1);
+		const Tsi normalised_exponent = exponent - exp_bias;
+
+		fused converted; // initialized to zero by the default constructor
+
+		bool did_work = false;
+		if (*ptr == 0 || *ptr == Ti(1) << (sz_all-1)) // zero
+		{
+			// already zero
+		}
+		else if (exponent == exp_max) // infinity and nan
+		{
+			// do nothing
+		}
+		else if (exponent == 0 && fraction != 0) // subnormal
+		{
+			converted.store.c = uint64_t(fraction) << (sz_exponent + sz_left + 1);
+			did_work = true;
+		}
+		else // normal
+		{
+			converted.store.b = 1;
+			converted.store.c = uint64_t(fraction) << (sz_exponent + sz_left + 1);
+			if (normalised_exponent >= 0)
+				converted <<= normalised_exponent;
+			else
+				converted >>= -normalised_exponent;
+			did_work = true;
+		}
+
+		if (sign && did_work)
+			converted.negate();
+
+		return converted;
+	}
+
+	template<class T, class Ti, class Tsi>
+	static T to_raw(fused source)
+	{
+		are_valid_conversion_types<T, Ti, Tsi>();
+
+		const std::size_t sz_exponent = typeid(T) == typeid(float) ? 8 : 11,
+			sz_fraction = typeid(T) == typeid(float) ? 23 : 52,
+			sz_all = sizeof(T) * 8;
+		const Tsi exp_bias = typeid(T) == typeid(float) ? 127 : 1023;
+
+		const auto neg = source.is_negative();
+		if (neg)
+			source.negate();
+
+		int first_one = -1;
+		for (int i=0; i < 256; i++)
+		{
+			if (source.bit(i))
+			{
+				first_one = i;
+				break;
+			}
+		}
+
+		T converted = 0;
+		auto ptr = reinterpret_cast<Ti*>(&converted);
+
+		if (first_one == -1) // zero
+		{
+			// already zero
+		}
+		else
+		{
+			const Ti sign = neg;
+			const Tsi normalised_exponent = 127 - first_one;
+			const Ti exponent = normalised_exponent + exp_bias;
+			Ti fraction = 0;
+
+			int i = first_one + 1;
+			for (int j = sz_fraction-1; j >= 0 && i < 256; j--, i++)
+			{
+				const Ti bit = static_cast<bool>(source.bit(i));
+				fraction |= bit << j;
+			}
+
+			*ptr = (sign << (sz_exponent + sz_fraction)) | (exponent << sz_fraction) | fraction;
 		}
 
 		return converted;
