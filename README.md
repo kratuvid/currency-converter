@@ -10,8 +10,6 @@ As the name implies. Goal is to learn and implement everything required from scr
 # Generic Todo
 - [ ] verbose debug messages
 - [ ] module map
-- [ ] build modules that require the current changed module
-- [ ] fix './make'
 
 # HTTP2 Todo
 - [ ] learn how it works

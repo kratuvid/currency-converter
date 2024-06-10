@@ -82,8 +82,8 @@ class Builder:
                 eprint('> Link:', target)
                 self.link(target, [])
 
-    def make_primary(self, primary):
-        if primary in self.primaries_checked:
+    def make_primary(self, primary, force=False):
+        if primary in self.primaries_checked and not force:
             return
         self.primaries_checked.add(primary)
 
@@ -91,8 +91,12 @@ class Builder:
         is_module = primaries[primary][0][0]
         deps = primaries[primary][0][1]
 
+        prev_pu = len(self.primaries_updated)
         for dep in deps:
-            self.make_primary(dep)
+            self.make_primary(dep, force)
+        now_pu = len(self.primaries_updated)
+
+        force = True if (now_pu > prev_pu or force) else False
 
         if is_module:
             # MIU is module interface unit
@@ -110,8 +114,8 @@ class Builder:
                 self.make_secondary((primary, source), self.module_flags)
             now_su = len(self.secondaries_updated)
 
-            force = True if now_su > prev_su else False
-            self.make_secondary((primary, primary_miu), self.module_flags + module_flags, force)
+            force_internal = True if (now_su > prev_su or force) else False
+            self.make_secondary((primary, primary_miu), self.module_flags + module_flags, force_internal)
 
             bmi_path = Builder.join_paths([ self.dirs['objects'], primary, primary + '.pcm' ])
             module_flags += ['-fmodule-file=' + primary + '=' + bmi_path]
@@ -119,13 +123,13 @@ class Builder:
 
         else:
             for unit in primary_sources:
-                self.make_secondary((primary, unit), self.module_flags)
+                self.make_secondary((primary, unit), self.module_flags, force)
 
         if len(self.secondaries_updated) != 0:
             self.primaries_updated.add(primary)
 
     def make_secondary(self, secondary, extra_flags, force=False):
-        if secondary in self.secondaries_checked:
+        if secondary in self.secondaries_checked and not force:
             return
         self.secondaries_checked.add(secondary)
 
