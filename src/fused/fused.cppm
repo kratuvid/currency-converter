@@ -126,21 +126,9 @@ public:
 		uint64_t carry = 0;
 		for (ssize_t i = LEN-1; i >= 0; i--)
 		{
-			const bool neg = ptr[i] >> 63, neg_rhs = ptr_rhs[i] >> 63;
-			ptr[i] += ptr_rhs[i] + carry;
-			const bool neg_result = ptr[i] >> 63;
-
-			if (neg && neg_rhs && !neg_result)
-			{
-				// ptr[i] |= uint64_t(1) << 63;
-				carry = 1;
-			}
-			else if (!neg && !neg_rhs && neg_result)
-			{
-				// ptr[i] &= ~(uint64_t(1) << 63);
-				carry = 0;
-			}
-			else carry = 0;
+			const uint64_t sum = ptr[i] + ptr_rhs[i] + carry;
+			carry = sum < ptr[i] ? 1 : 0;
+			ptr[i] = sum;
 		}
 
 		return *this;

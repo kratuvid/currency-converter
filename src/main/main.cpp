@@ -59,13 +59,15 @@ int main()
 #elif WHAT == 4
 	try
 	{
-		using fused_local = fused<2>;
+		using fused_local = fused<3>;
 
-		double i1 = -4, i2 = -5;
+		double i1 = -3.04, i2 = -1e-5;
 		std::print("Two double please: ");
 		// std::cin >> i1 >> i2;
-		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2), fs = f1 + f2;
-		auto d1 = f1.ito(), d2 = f2.ito(), ds = fs.ito();
+		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2);
+		auto fs = f1 + f2;
+		auto d1 = f1.ito(), d2 = f2.ito();
+		auto ds = fs.ito();
 		std::println("{} + {} = {} (actual {})", d1, d2, ds, i1 + i2);
 	}
 #endif
