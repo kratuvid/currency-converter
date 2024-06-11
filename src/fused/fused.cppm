@@ -1,5 +1,7 @@
 export module fused;
 
+import <print>;
+import <cstring>;
 import <cstddef>;
 import <cstdint>;
 import <exception>;
@@ -16,14 +18,31 @@ private:
 	struct __attribute__ ((__packed__)) {
 		uint64_t integer[LEN_base], fraction[LEN_base];
 	} store;
-	uint64_t* ptr = store.integer;
-	const uint64_t* ptr_const = store.integer;
+	uint64_t* const ptr = store.integer;
+	const uint64_t* const ptr_const = store.integer;
 
 public:
 	fused()
 	{
 		static_assert(LEN_base >= 1);
 		zeroes();
+	}
+
+	fused(const fused& other)
+	{
+		memcpy(ptr, other.ptr, SZ);
+	}
+
+	template<size_t LEN_base_other>
+	fused(const fused<LEN_base_other>& other)
+	{
+		memset(store.integer, other.is_negative() ? 0xff : 0, LEN_base * sizeof(uint64_t));
+		memset(store.fraction, 0, LEN_base * sizeof(uint64_t));
+
+		const auto LEN_base_min = std::min(LEN_base, LEN_base_other);
+		const auto SZ_base_min = LEN_base_min * sizeof(uint64_t);
+		memcpy(ptr + (LEN_base - LEN_base_min), other.get_store() + (LEN_base_other - LEN_base_min), SZ_base_min);
+		memcpy(store.fraction, other.get_store() + LEN_base_other, SZ_base_min);
 	}
 
 	template<class... Args>
@@ -82,11 +101,21 @@ public:
 		constant(~uint64_t(0));
 	}
 
-	fused operator*(const fused& rhs)
+	fused<LEN_base * 2> operator*(const fused& rhs)
 	{
-		exception::enact("Multiplication is unimplemented");
+		fused<LEN_base * 2> product;
+		fused<LEN_base * 2> copy(*this), copy_rhs(rhs);
 
-		fused product;
+		const bool neg_rhs = rhs.is_negative();
+
+		for (ssize_t i = (SZ_bits * 2) - 1; i >= 0; i--)
+		{
+			const bool bit = copy_rhs.bit(i);
+			if (bit)
+				product += copy;
+			copy <<= 1;
+		}
+		
 		return product;
 	}
 
@@ -103,13 +132,13 @@ public:
 
 			if (neg && neg_rhs && !neg_result)
 			{
-				ptr[i] |= uint64_t(1) << 63;
+				// ptr[i] |= uint64_t(1) << 63;
 				carry = 1;
 			}
 			else if (!neg && !neg_rhs && neg_result)
 			{
-				ptr[i] &= ~(uint64_t(1) << 63);
-				carry = 1;
+				// ptr[i] &= ~(uint64_t(1) << 63);
+				carry = 0;
 			}
 			else carry = 0;
 		}
@@ -194,7 +223,7 @@ public:
 		return store.integer[0] >> 63;
 	}
 
-	uint64_t bit(size_t i) const
+	bool bit(size_t i) const
 	{
 		const auto unit = i / 64, at = i % 64, at_real = 63 - at;
 		return (ptr[unit] >> at_real) & 0x1;

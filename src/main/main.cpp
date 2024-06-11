@@ -44,26 +44,29 @@ int main()
 #elif WHAT == 3
 	try
 	{
+		using fused_local = fused<2>;
+		
 		double i1, i2;
 		std::print("Two double please: ");
 		std::cin >> i1 >> i2;
-		auto f1 = fused::from(i1), f2 = fused::from(i2);
-		auto fp = f2 * f2;
-		auto d1 = f1.ito(), d2 = f2.ito();
-		auto dp = fp.ito();
-		std::println("{} * {} = {} (actuual {})", d1, d2, dp, i1 * i2);
+
+		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2);
+		auto fp = f1 * f2;
+		auto d1 = f1.ito(), d2 = f2.ito(), dp = fp.ito();
+
+		std::println("{} * {} = {} (actual {})", d1, d2, dp, i1 * i2);
 	}
 #elif WHAT == 4
 	try
 	{
-		using fused_local = fused<10>;
+		using fused_local = fused<2>;
 
-		double i1, i2;
+		double i1 = -4, i2 = -5;
 		std::print("Two double please: ");
-		std::cin >> i1 >> i2;
-		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2);
-		auto d1 = f1.ito(), d2 = f2.ito();
-		std::println("{}, {}", d1, d2);
+		// std::cin >> i1 >> i2;
+		auto f1 = fused_local::from(i1), f2 = fused_local::from(i2), fs = f1 + f2;
+		auto d1 = f1.ito(), d2 = f2.ito(), ds = fs.ito();
+		std::println("{} + {} = {} (actual {})", d1, d2, ds, i1 + i2);
 	}
 #endif
 	catch (std::exception& e)
