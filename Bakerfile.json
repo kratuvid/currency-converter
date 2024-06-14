@@ -1,0 +1,6 @@
+{
+  "targets": {
+	  "main": ["main/main.cpp", "cc/cc.cppm", "http/http.cppm", "tls/tls.cppm",
+			   "hash/hash.cppm", "fused/fused.cppm"]
+  }
+}

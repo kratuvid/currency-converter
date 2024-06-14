@@ -12,6 +12,8 @@ import <netinet/in.h>;
 import <unistd.h>;
 import <netdb.h>;
 
+import tls;
+
 export class http
 {
 private:

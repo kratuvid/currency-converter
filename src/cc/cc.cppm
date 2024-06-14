@@ -2,6 +2,7 @@ export module cc;
 
 import <cstdint>;
 
+import http;
 import fused;
 
 export enum currency_t
